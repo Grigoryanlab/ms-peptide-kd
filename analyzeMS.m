@@ -1,22 +1,26 @@
 %this version if for trial6 with only one set of control
-function analyzeMS_yu4(outBase)
-dataFileXLS = '86252_55_86900_01TMT_yu.xlsx';
-D = 40;     % overall domain concentration in experiment (100uM*500ul/1250ul)
+function analyzeMS(outBase, dataFileXLS)
+if (~exist('dataFileXLS', 'var'))
+    dataFileXLS = 'data/86252_55_86900_01TMT_yu.xlsx';
+end
+
+D = 40;        % overall domain concentration in experiment (100uM*500ul/1250ul)
 units = 10^-6; % concentration units in M
-[Kd, KdLo, KdHi, seqs] = fitKds(dataFileXLS, D, 1); %change 0 to 1 to make two figures
+% change how 0 to 1 to make two figures
+res = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'Set4', 'domainConc', D, 'show', 1));
 
 % now learning sequence-Kd mapping
 M = containers.Map;
 A = containers.Map;
-for i = 1:size(Kd, 1)
-    kds = Kd(i, isfinite(Kd(i, :)));
+for i = 1:size(res.Kd, 1)
+    kds = res.Kd(i, isfinite(res.Kd(i, :)));
     if (~isempty(kds))
-        if (isKey(M, seqs{i}))
-            A(seqs{i}) = [A(seqs{i}) kds];
-            M(seqs{i}) = mean(A(seqs{i}));
+        if (isKey(M, res.seqs{i}))
+            A(res.seqs{i}) = [A(res.seqs{i}) kds];
+            M(res.seqs{i}) = mean(A(res.seqs{i}));
         else
-            M(seqs{i}) = mean(kds);
-            A(seqs{i}) = kds;
+            M(res.seqs{i}) = mean(kds);
+            A(res.seqs{i}) = kds;
         end
     end
 end
@@ -57,44 +61,48 @@ for i = 1:length(alpha)
     end
 end
 
-function [Kd, KdLo, KdHi, procSeqs] = fitKds(dataFileXLS, D, show)
+function ret = fitKds(inputs)
 % read data
-[num, ~, raw] = xlsread(dataFileXLS, 'Set2', 'B2:L319');
-allSeqs = raw(1:end, 7);
+[num, ~, raw] = xlsread(inputs.xlsFile, inputs.sheetName);
+allSeqs = raw(2:end, 8);
 
 % collect data from the three repeats
-repeats = cell(1, 1);
-repeats{1}.dcorr = num(:, 5);
-repeats{1}.xcorr = num(:, 4);
-repeats{1}.expOut = num(:, 9);
-repeats{1}.ctrIn = num(:, 11);
-repeats{1}.ctrOut = num(:, 10);
+dcorr = num(:, 5);
+xcorr = num(:, 4);
+expOut = num(:, 9);
+ctrIn = num(:, 11);
+ctrOut = num(:, 10);
 
+data = struct('seqs', {allSeqs}, 'dcorr', dcorr, 'xcorr', xcorr, 'expOut', expOut, 'ctrIn', ctrIn, 'ctrOut', ctrOut);
+ret = fitKdsFromData(inputs, data);
+
+
+function result = fitKdsFromData(inputs, data)
 
 % mark which sequences are okay
-seqsOK = false(1, length(allSeqs));
-for i = 1:length(allSeqs)
-    seqsOK(i) = ~isempty(regexp(allSeqs{i}, '-\.[ACDEFGHIKLMNPQRSTVWY]{6}\.-', 'once'));
+seqsOK = false(1, length(data.seqs));
+for i = 1:length(data.seqs)
+    seqsOK(i) = ~isempty(regexp(data.seqs{i}, '-\.[ACDEFGHIKLMNPQRSTVWY]{6}\.-', 'once'));
 end
-fprintf('%d / %d data points have valid sequences\n', length(find(seqsOK)), length(allSeqs));
+fprintf('%d / %d data points have valid sequences\n', length(find(seqsOK)), length(data.seqs));
 
 % process sequences
-seqs = allSeqs(seqsOK);
+seqs = data.seqs(seqsOK);
 procSeqs = seqs;
 for i = 1:length(procSeqs)
     procSeqs{i} = procSeqs{i}(3:end-2);
 end
 
 % go over each repeat
-KdLo = nan(length(find(seqsOK)), length(repeats{1}));
+KdLo = nan(length(find(seqsOK)), 1);
 KdHi = KdLo; Kd = KdLo;
 if (~exist('show', 'var')), show = 1; end
-x = repeats{1}.ctrIn(seqsOK);
-y = repeats{1}.ctrOut(seqsOK);
-[g, ~] = gaussianErrorModel(x, y);
+x = data.ctrIn(seqsOK);
+y = data.ctrOut(seqsOK);
+[g, ~] = gaussianErrorModelWithBaseline(x, y);
 
 if (show)
-    subplot(length(repeats{1}), 3, 1);% first column of figures in figure1
+    subplot(1, 3, 1);% first column of figures in figure1
     hold off; plot(x, y, 'k.'); hold on;
     plot(sort(x), sort(x) + 3*sqrt(myVar(sort(x),g)));% first column of figures in figure1
     plot(sort(x), sort(x) - 3*sqrt(myVar(sort(x),g)));
@@ -102,12 +110,12 @@ if (show)
 %       plot(sort(x), (sort(x) - g));
         %set(gca, 'YScale', 'lin', 'xscale', 'log') %comment this line out
         %to give log scale in figure1 most left panels
-    subplot(length(repeats{1}), 3, 2);% second column of figures in figure1, x-axis is x, y-axis 
+    subplot(1, 3, 2);% second column of figures in figure1, x-axis is x, y-axis 
     plot(sort(x), sqrt(myVar(sort(x), g))); 
 end
 
-X = repeats{1}.expOut(seqsOK);
-Y = repeats{1}.ctrOut(seqsOK);
+X = data.expOut(seqsOK);
+Y = data.ctrOut(seqsOK);
 valid = find(~isnan(X) & ~isnan(Y)); X = X(valid); Y = Y(valid);
 
 % compute ratio alpha = [peptide outside in experiment]/[peptide outside in control]
@@ -115,16 +123,17 @@ valid = find(~isnan(X) & ~isnan(Y)); X = X(valid); Y = Y(valid);
 okPoints = find(alphaStd < 0.4);
 fprintf('--> %d / %d points have tolerable error\n', length(okPoints), length(alpha));
 if (show)
-    subplot(length(repeats{1}), 3, 3);% third column of figure1
+    subplot(1, 3, 3);% third column of figure1
     errorbar(1:length(X), alpha, alphaStd, alphaStd, '.');
 end
 
 % compute Kd range
-[Kdr, KdRange] = estimateKd(D, alpha(okPoints), alphaStd(okPoints));
+[Kdr, KdRange] = estimateKd(inputs.domainConc, alpha(okPoints), alphaStd(okPoints));
 KdLo(valid(okPoints)) = KdRange(:, 1);
 KdHi(valid(okPoints)) = KdRange(:, 2);
 Kd(valid(okPoints)) = Kdr;
 
+result = struct('Kd', Kd, 'KdLo', KdLo, 'KdHi', KdHi, 'seqs', {procSeqs});
 
 
 
@@ -143,6 +152,27 @@ opts = optimset('Display', 'off');
 g = fminunc(@(p) myObj(x, y, p), [0.2 0 100], opts);
 g = fminsearch(@(p) myObj(x, y, p), g, opts);
 o = myObj(x, y, g);
+
+% figures out a Gaussian error model of the form
+% yi = a*xi + b + err(xi) = a*xi + b +  + A*gauss(0, B*xi + C)
+function [g, o] = gaussianErrorModelWithBaseline(x0, y0)
+
+ii = find(~isnan(x0) & ~isnan(y0));
+x = x0(ii);
+y = y0(ii);
+
+% first do a linear regression
+b = regress(y, [x (0*x + 1)]);
+
+opts = optimset('Display', 'off');
+g = fminunc(@(p) myObj1(x, y, p), [0.2 0 100 b'], opts);
+g = fminsearch(@(p) myObj1(x, y, p), g, opts);
+o = myObj1(x, y, g);
+
+function o = myObj1(x, y, p)
+b = p(4:5);
+yp = [x (0*x + 1)]*b';
+o = -mean(gauss(yp - y, 0, myVar(y, p)));
 
 function o = myObj(x, y, p)
 o = -mean(gauss(x - y, 0, myVar(x, p)));
