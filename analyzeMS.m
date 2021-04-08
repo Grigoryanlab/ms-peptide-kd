@@ -7,20 +7,25 @@ end
 D = 40;        % overall domain concentration in experiment (100uM*500ul/1250ul)
 units = 10^-6; % concentration units in M
 % change how 0 to 1 to make two figures
-res = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'Set4', 'domainConc', D, 'show', 1));
+res = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'Set3', 'domainConc', D, 'show', 1));
 
 % now learning sequence-Kd mapping
-M = containers.Map;
-A = containers.Map;
+M = containers.Map; % mean Kd for each unique sequence
+A = containers.Map; % all Kds for each unique sequence
+E = containers.Map; % error (size of CI interval) of each Kd estimate for each unique sequence
 for i = 1:size(res.Kd, 1)
-    kds = res.Kd(i, isfinite(res.Kd(i, :)));
+    idx = isfinite(res.Kd(i, :));
+    kds = res.Kd(i, idx);
+    kd_ints = res.KdHi(i, idx) - res.KdLo(i, idx);
     if (~isempty(kds))
         if (isKey(M, res.seqs{i}))
             A(res.seqs{i}) = [A(res.seqs{i}) kds];
             M(res.seqs{i}) = mean(A(res.seqs{i}));
+            E(res.seqs{i}) = [E(res.seqs{i}) kd_ints];
         else
             M(res.seqs{i}) = mean(kds);
             A(res.seqs{i}) = kds;
+            E(res.seqs{i}) = kd_ints;
         end
     end
 end
@@ -28,11 +33,13 @@ fprintf('%d unique peptides\n', length(keys(M)));
 
 % write summary
 fid = fopen(sprintf('%s.csv', outBase), 'w');
-fprintf(fid, 'sequence, Kd estimate, Kd standard error, number of samples\n');
+fprintf(fid, 'sequence, Kd estimate, Kd standard error (obs), error (est), number of samples\n');
 keySeqs = keys(M);
 vals = values(M); vals = [vals{:}];
 for i = 1:length(keySeqs)
-    fprintf(fid, '%s,%f,%f,%f\n', keySeqs{i}, vals(i), std(A(keySeqs{i}))/sqrt(length(A(keySeqs{i}))), length(A(keySeqs{i})));
+    err_est = mean(E(keySeqs{i}))/sqrt(length(A(keySeqs{i})));
+    if isinf(err_est), err_est = 1000; end
+    fprintf(fid, '%s,%f,%f,%f,%f\n', keySeqs{i}, vals(i), std(A(keySeqs{i}))/sqrt(length(A(keySeqs{i}))), err_est, length(A(keySeqs{i})));
 end
 fclose(fid);
 
@@ -100,18 +107,21 @@ if (~exist('show', 'var')), show = 1; end
 x = data.ctrIn(seqsOK);
 y = data.ctrOut(seqsOK);
 [g, ~] = gaussianErrorModelWithBaseline(x, y);
+b = g(end-1:end);
 
 if (show)
+    figure;
     subplot(1, 3, 1);% first column of figures in figure1
-    hold off; plot(x, y, 'k.'); hold on;
-    plot(sort(x), sort(x) + 3*sqrt(myVar(sort(x),g)));% first column of figures in figure1
-    plot(sort(x), sort(x) - 3*sqrt(myVar(sort(x),g)));
+%     hold off; plot(x, y, 'k.'); hold on;
+    hold off; plot(y, x*b(1) + b(2), 'k.'); hold on;
+    plot(sort(y), sort(y) + 3*sqrt(myVar(sort(y), g))); % first column of figures in figure1
+    plot(sort(y), sort(y) - 3*sqrt(myVar(sort(y), g)));
 %       plot(sort(x), (sort(x) + g)); %why not these???
 %       plot(sort(x), (sort(x) - g));
         %set(gca, 'YScale', 'lin', 'xscale', 'log') %comment this line out
         %to give log scale in figure1 most left panels
     subplot(1, 3, 2);% second column of figures in figure1, x-axis is x, y-axis 
-    plot(sort(x), sqrt(myVar(sort(x), g))); 
+    plot(sort(y), sqrt(myVar(sort(y), g))); 
 end
 
 X = data.expOut(seqsOK);
@@ -165,12 +175,12 @@ y = y0(ii);
 b = regress(y, [x (0*x + 1)]);
 
 opts = optimset('Display', 'off');
-g = fminunc(@(p) myObj1(x, y, p), [0.2 0 100 b'], opts);
+g = fminunc(@(p) myObj1(x, y, p), [0.2 0 0.1 100 b'], opts);
 g = fminsearch(@(p) myObj1(x, y, p), g, opts);
 o = myObj1(x, y, g);
 
 function o = myObj1(x, y, p)
-b = p(4:5);
+b = p(end-1:end);
 yp = [x (0*x + 1)]*b';
 o = -mean(gauss(yp - y, 0, myVar(y, p)));
 
@@ -182,7 +192,8 @@ function v = gauss(x, mu, s)
 v = log(1./(s*sqrt(2*pi))) - 0.5*((x - mu)./sqrt(s)).^2;
 
 function v = myVar(x, p)
-v = abs(p(1)*x.*x + p(2)*x + abs(p(3)));
+v = abs(p(1)*x.*x + p(2)*x + p(3)*sqrt(abs(x)) + abs(p(4)));
+% v = abs(p(1)*x.*x + p(2)*x + abs(p(3)));
 % v = p(1)*x + p(2);
 
 function [r, rStd] = ratioWithErrorPropagation(X, Y, stdX, stdY)
