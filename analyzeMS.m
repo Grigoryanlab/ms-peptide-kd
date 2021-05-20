@@ -1,13 +1,16 @@
 %this version if for trial6 with only one set of control
-function analyzeMS(outBase, dataFileXLS)
-if (~exist('dataFileXLS', 'var'))
+function analyzeMS(outBase, dataFileXLS, setName, doCorrection)
+if (~exist('dataFileXLS', 'var') || isempty(dataFileXLS))
     dataFileXLS = 'data/86252_55_86900_01TMT_yu.xlsx';
+end
+if (~exist('doCorrection', 'var'))
+    doCorrection = 0;
 end
 
 D = 40;        % overall domain concentration in experiment (100uM*500ul/1250ul)
 units = 10^-6; % concentration units in M
 % change how 0 to 1 to make two figures
-res = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'Set3', 'domainConc', D, 'show', 1));
+res = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', setName, 'domainConc', D, 'show', 1, 'doCorrection', doCorrection));
 
 % now learning sequence-Kd mapping
 M = containers.Map; % mean Kd for each unique sequence
@@ -109,6 +112,22 @@ y = data.ctrOut(seqsOK);
 [g, ~] = gaussianErrorModelWithBaseline(x, y);
 b = g(end-1:end);
 
+X = data.expOut(seqsOK);
+Y = data.ctrOut(seqsOK);
+valid = find(~isnan(X) & ~isnan(Y)); X = X(valid); Y = Y(valid);
+
+if inputs.doCorrection
+    [Yc, p] = correctByMedianFit(X, Y);
+    plot(Y, X, '.');
+    hold on;
+    plot([min(Y) max(Y)], p(1) + p(2)*[min(Y) max(Y)], '-');
+    xlabel('Control Out');
+    ylabel('Experiment Out');
+    title('Signal correction');
+    legend('Data', 'Correction line');
+    Y = Yc;
+end
+
 if (show)
     figure;
     subplot(1, 3, 1);% first column of figures in figure1
@@ -124,12 +143,8 @@ if (show)
     plot(sort(y), sqrt(myVar(sort(y), g))); 
 end
 
-X = data.expOut(seqsOK);
-Y = data.ctrOut(seqsOK);
-valid = find(~isnan(X) & ~isnan(Y)); X = X(valid); Y = Y(valid);
-
 % compute ratio alpha = [peptide outside in experiment]/[peptide outside in control]
-[alpha, alphaStd] = ratioWithErrorPropagation(X, Y, sqrt(myVar(Y, g)), sqrt(myVar(X, g)));
+[alpha, alphaStd] = ratioWithErrorPropagation(X, Y, sqrt(myVar(X, g)), sqrt(myVar(Y, g)));
 okPoints = find(alphaStd < 0.4);
 fprintf('--> %d / %d points have tolerable error\n', length(okPoints), length(alpha));
 if (show)
@@ -145,6 +160,12 @@ Kd(valid(okPoints)) = Kdr;
 
 result = struct('Kd', Kd, 'KdLo', KdLo, 'KdHi', KdHi, 'seqs', {procSeqs});
 
+
+function [Yc, p] = correctByMedianFit(X, Y)
+opts = optimset('Display', 'off');
+p = fminunc(@(p) median(abs(p(1) + Y*p(2) - X)), [0 1], opts);
+p = fminsearch(@(p) median(abs(p(1) + Y*p(2) - X)), p, opts);
+Yc = p(1) + Y*p(2);
 
 
 % --- Gaussian error modeling --- %
