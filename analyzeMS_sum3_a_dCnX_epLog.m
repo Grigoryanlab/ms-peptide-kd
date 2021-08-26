@@ -32,24 +32,28 @@ allResult = [res1,res2,res3];
 for j = 1:3
     for i = 1:size(allResult(j).Kd, 1) %size of allResult(1) is 1, size of AllResult(1).Kd is three columns
         idx = isfinite(allResult(j).Kd(i, :)); % Kd has multiple columns here,so this for loop will go through every row in every column
-        kds = log10(allResult(j).Kd(i, idx));
-        kd_ints = allResult(j).KdError(i, idx);
+
+        vals = log10(allResult(j).Kd(i, idx));
+        err = allResult(j).Log10KdError(i, idx);
+%         vals = allResult(j).Kd(i, idx);
+%         err = allResult(j).KdError(i, idx);
+
         f = allResult(j).a(i,idx);
         dCn = allResult(j).dcor(i,idx);
         xcorr = allResult(j).xcor(i,idx);
-        %if (~isempty(kds)) %uncomment line60 if uncomment this line
-        if all(~isempty(kds))&& all(~isinf(kd_ints))
+        %if (~isempty(vals)) %uncomment line60 if uncomment this line
+        if all(~isempty(vals))&& all(~isinf(err))
         
-        %if ((~isempty(kds))&(~isinf(kd_ints)))% this also works
+        %if ((~isempty(vals))&(~isinf(err)))% this also works
         % '&' for 3 repeats(every element in array), '&&' for one repeat   
-        %if all(~isempty(kds)&& all(~isinf(kd_ints))&& all(kds >= 4.4 & kds <= 160))
-        %kds >= 4.4 & kds <= 160 check the alpha values are between 0.1 and
+        %if all(~isempty(vals)&& all(~isinf(err))&& all(vals >= 4.4 & vals <= 160))
+        %vals >= 4.4 & vals <= 160 check the alpha values are between 0.1 and
         %0.8 for D=40uM
        
             if (isKey(M, allResult(j).seqs{i}))
-                A(allResult(j).seqs{i}) = [A(allResult(j).seqs{i}) kds];
+                A(allResult(j).seqs{i}) = [A(allResult(j).seqs{i}) vals];
                 M(allResult(j).seqs{i}) = mean(A(allResult(j).seqs{i}));
-                E(allResult(j).seqs{i}) = [E(allResult(j).seqs{i}) kd_ints];
+                E(allResult(j).seqs{i}) = [E(allResult(j).seqs{i}) err];
                 F(allResult(j).seqs{i}) = [F(allResult(j).seqs{i}) f];
                 G(allResult(j).seqs{i}) = mean(F(allResult(j).seqs{i}));
                 H(allResult(j).seqs{i}) = [H(allResult(j).seqs{i}) dCn];
@@ -57,9 +61,9 @@ for j = 1:3
                 J(allResult(j).seqs{i}) = [J(allResult(j).seqs{i}) xcorr];
                 K(allResult(j).seqs{i}) = mean(J(allResult(j).seqs{i}));
             else
-                M(allResult(j).seqs{i}) = mean(kds);
-                A(allResult(j).seqs{i}) = kds;
-                E(allResult(j).seqs{i}) = kd_ints;
+                M(allResult(j).seqs{i}) = mean(vals);
+                A(allResult(j).seqs{i}) = vals;
+                E(allResult(j).seqs{i}) = err;
                 F(allResult(j).seqs{i}) = f;
                 G(allResult(j).seqs{i}) = mean(f);
                 H(allResult(j).seqs{i}) = dCn;
@@ -75,7 +79,7 @@ end
 
 % write summary
 fid = fopen(sprintf('%s.csv', outBase), 'w');
-fprintf(fid, 'sequence, log(Kd_estimate), standard_error(logKd), error (est), number of samples, alpha, dcorr, dcorr error,xcorr\n');
+fprintf(fid, 'sequence, log(Kd_estimate), standard_error(logKd), error (est), error (obs), number of samples, alpha, dcorr, dcorr error,xcorr\n');
 keySeqs = keys(M);
 vals = values(M);
 vals = [vals{:}];
@@ -85,13 +89,22 @@ dVal = values(I);
 dVal = [dVal{:}];
 xVal = values(K);
 xVal = [xVal{:}];
+errTab = zeros(length(keySeqs), 4);
 for i = 1:length(keySeqs)
     err_est = mean(E(keySeqs{i}))/sqrt(length(A(keySeqs{i})));
+    err_obs = std(A(keySeqs{i}));
+    errTab(i, :) = [err_est, err_obs, length(A(keySeqs{i})), vals(i)];
     %err_est = mean(E(keySeqs{i}));
     %if isinf(err_est), err_est = 1000; end
-    fprintf(fid, '%s,%f,%f,%f,%f,%f,%f,%f,%f\n', keySeqs{i}, vals(i), std(A(keySeqs{i}))/sqrt(length(A(keySeqs{i}))), err_est, length(A(keySeqs{i})),alphaValue(i),dVal(i),std(H(keySeqs{i}))/sqrt(length(H(keySeqs{i}))),xVal(i));
+    fprintf(fid, '%s,%f,%f,%f,%f,%f,%f,%f,%f\n', keySeqs{i}, vals(i), std(A(keySeqs{i}))/sqrt(length(A(keySeqs{i}))), err_est, err_obs, length(A(keySeqs{i})),alphaValue(i),dVal(i),std(H(keySeqs{i}))/sqrt(length(H(keySeqs{i}))),xVal(i));
 end
 fclose(fid);
+
+% plot estimated versus observed error
+figure;
+plot(errTab(errTab(:, 3) > 2, 1), errTab(errTab(:, 3) > 2, 2), 'o');
+xlabel('Estimated error');
+ylabel('Observed error');
 
 % file a site-independent model
 [mm, alpha] = modelMatrix(keySeqs);
@@ -162,7 +175,7 @@ end
 
 % go over each repeat
 Kd = nan(length(find(seqsOK)), 1);
-KdError=Kd;
+Log10KdError=Kd; KdError=Kd;
 a=Kd;dcor=Kd;xcor=Kd;
 if (~exist('show', 'var')), show = 1; end
 x = data.ctrIn(seqsOK);
@@ -202,13 +215,14 @@ if (show)
 end
 
 % compute Kd range
-[Kdr, error] = estKd(inputs.domainConc, alpha(okPoints), alphaStd(okPoints));
-KdError(valid(okPoints)) = error;
+[Kdr, errorKd, errorLog10Kd] = estKd(inputs.domainConc, alpha(okPoints), alphaStd(okPoints));
+Log10KdError(valid(okPoints)) = errorLog10Kd;
+KdError(valid(okPoints)) = errorKd;
 Kd(valid(okPoints)) = Kdr;
 a(valid(okPoints)) = alpha(okPoints);
 dcor(valid(okPoints)) = d(okPoints);
 xcor(valid(okPoints)) = xc(okPoints);
-result = struct('Kd', Kd, 'KdError', KdError, 'seqs', {procSeqs},"a", a,"dcor",dcor,"xcor",xcor);
+result = struct('Kd', Kd, 'Log10KdError', Log10KdError, 'KdError', KdError, 'seqs', {procSeqs},"a", a,"dcor",dcor,"xcor",xcor);
 
 
 
@@ -284,11 +298,15 @@ ii = find((alpha > 0) & (alpha < 1)); Kd(ii, 1) = D*alpha(ii)./(1 - alpha(ii));
 ii = find(alpha <= 0); Kd(ii) = 0;
 ii = find(alpha >= 1); Kd(ii) = inf;
 
-function [Kd, errorKd] = estKd(D, alpha, alphaStd)
-errorKd = -1*ones(length(alpha), 1); % lower and upper bounds of Kd
+function [Kd, errorKd, errorLog10Kd] = estKd(D, alpha, alphaStd)
+errorKd = -1*ones(length(alpha), 1);
+errorLog10Kd = errorKd;
 Kd = -1*ones(length(alpha), 1);
 
-ii = find((alpha > 0) & (alpha < 1)); Kd(ii, 1) = D*alpha(ii)./(1 - alpha(ii));errorKd(ii)=alphaStd(ii)./((alpha(ii)-alpha(ii).^2)*log(10));
+ii = find((alpha > 0) & (alpha < 1));
+Kd(ii, 1) = D*alpha(ii)./(1 - alpha(ii));
+errorKd(ii) = D*alphaStd(ii)./((1 - alpha(ii)).^2);
+errorLog10Kd(ii)=alphaStd(ii)./((alpha(ii)-alpha(ii).^2)*log(10));
 ii = find(alpha <= 0); Kd(ii) = 0;errorKd(ii)=inf;
 ii = find(alpha >= 1); Kd(ii) = inf;errorKd(ii)=inf;
 
