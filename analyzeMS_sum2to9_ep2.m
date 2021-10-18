@@ -301,7 +301,7 @@ rStd = (X./Y).*sqrt((cvx.^2) + (cvy.^2) + 3*(cvy.^2).*(cvx.^2) + 8*(cvy.^4));
 r = (X./Y).*(1 + cvy.^2);
 
 
-function [Kd, errorKd,KdRange] = estKd(D, alpha, alphaStd)
+function [Kd, errorKd, errorLogKd, KdRange] = estKd(D, alpha, alphaStd)
 errorKd = -1*ones(length(alpha), 1); % lower and upper bounds of Kd
 Kd = -1*ones(length(alpha), 1);
 KdRange = -1*ones(length(alpha), 2); % lower and upper bounds of Kd

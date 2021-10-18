@@ -1,4 +1,7 @@
-function plotFpMsKd
+function plotFpMsKd(pedal)
+if (~exist('pedal', 'var'))
+    pedal = 'trial3-ep2.csv';
+end
 fp_result = 'Kd_FP_sum.xlsx';
 Range = 'A1:C34';
 [num, ~, raw] = xlsread(fp_result,Range);
@@ -7,12 +10,10 @@ x=num(:, 1);%fp
 xE=num(:, 2);% fp errors
 y=nan(length(x),1);
 yE=nan(length(y),1);
-pedal = 'trial3-ep2.csv';
-[num3, ~, raw3] = xlsread(pedal);
-seq3 = raw3(2:end,1);
-kd = num3(:, 1);%pedal kd
-%obs = num3(:,2); % pedal obs error
-est = num3(:,3); % pedal estimated error
+T = readtable(pedal);
+seq3 = T.sequence;
+kd = T.Kd_estimate; % pedal kd
+est = T.error_est_; % pedal estimated error
 for i = 1:length(seq)
     for j = 1: length(seq3)
         if (seq{i}==seq3{j})
