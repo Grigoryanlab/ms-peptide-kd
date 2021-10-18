@@ -27,7 +27,7 @@ xE=xE./1000000;
 y=y./1000000;
 yE=yE./1000000;
 figure;
-errorbar(log10(x), log10(y), yE./(y*log(10)), yE./(y*log(10)), xE./(x*log(10)),xE./(x*log(10)), 'o','MarkerSize',5,'MarkerEdgeColor','black','MarkerFaceColor','black','LineStyle','none', 'Color', [0.5,0.5,0.5],'linewidth', 0.5)
+errorbar(log10(x), log10(y), yE./(y*log(10)), yE./(y*log(10)), xE./(x*log(10)), xE./(x*log(10)), 'o','MarkerSize',5,'MarkerEdgeColor','black','MarkerFaceColor','black','LineStyle','none', 'Color', [0.5,0.5,0.5],'linewidth', 0.5)
 
 xlabel('FP log10(Ki or Kd/[M])')
 ylabel('PEDAL log10(Kd/[M])')
