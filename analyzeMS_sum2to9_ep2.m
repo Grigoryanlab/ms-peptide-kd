@@ -11,26 +11,33 @@ if (~exist('aggregationType', 'var'))
     aggregationType = 'mean';
 end
 
-D = 35.29; % small setting, 300/850    
+D = 35.29; % high domain concentration    
+D2 = 3.529; % low domain concentration
 units = 10^-6; % concentration units in M
 allResult = [];
 
-% change how 0 to 1 to make two figures
+% 4096-peptide library
 allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial3','region','B1:L2247', 'domainConc', D, 'show', 1, 'format', 1), allResult);
 allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial3','region','S1:AC2218', 'domainConc', D, 'show', 1, 'format', 1), allResult);
 allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial3','region','AJ1:AT2201', 'domainConc', D, 'show', 1, 'format', 1), allResult);
+%24-pep
 allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial2','region','B1:K127','domainConc', D, 'show', 1, 'format', 4), allResult);
 allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial2','region','M1:V109','domainConc', D, 'show', 1, 'format', 4), allResult);
 
-%set1
+%432-pep
 allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set1','region','B1:L318', 'domainConc', D, 'show', 1, 'format', 2), allResult);
 allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set1','region','O1:Y354', 'domainConc', D, 'show', 1, 'format', 2), allResult);
 allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set1','region','AB1:AL337', 'domainConc', D, 'show', 1, 'format', 2), allResult);
 
-%set2
+%864-pep
 allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set2','region','B1:L777', 'domainConc', D, 'show', 1, 'format', 2), allResult);
 allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set2','region','O1:Y800', 'domainConc', D, 'show', 1, 'format', 2), allResult);
 allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set2','region','AB1:AL836', 'domainConc', D, 'show', 1, 'format', 2), allResult);
+
+%432-pep(low domain concentration)
+allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial8-set2','region','B1:L217', 'domainConc', D2, 'show', 1,'format', 2), allResult);
+allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial8-set2','region','O1:Y206', 'domainConc', D2, 'show', 1,'format', 2), allResult);
+allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial8-set2','region','AB1:AL194', 'domainConc', D2, 'show', 1,'format', 2), allResult);
 
 
 % now learning sequence-Kd mapping
