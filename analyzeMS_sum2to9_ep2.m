@@ -11,20 +11,20 @@ end
 D = 35.29; % small setting, 300/850    
 units = 10^-6; % concentration units in M
 % change how 0 to 1 to make two figures
-res0 = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial3','region','B1:L2247', 'domainConc', D, 'show', 1));
-res1 = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial3','region','S1:AC2218', 'domainConc', D, 'show', 1));
-res2 = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial3','region','AJ1:AT2201', 'domainConc', D, 'show', 1));
-res3 = fitKds4(struct('xlsFile', dataFileXLS, 'sheetName', 'trial2','region','B1:K127','domainConc', D, 'show', 1));
-res4 = fitKds4(struct('xlsFile', dataFileXLS, 'sheetName', 'trial2','region','M1:V109','domainConc', D, 'show', 1));
+res0 = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial3','region','B1:L2247', 'domainConc', D, 'show', 1, 'format', 1));
+res1 = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial3','region','S1:AC2218', 'domainConc', D, 'show', 1, 'format', 1));
+res2 = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial3','region','AJ1:AT2201', 'domainConc', D, 'show', 1, 'format', 1));
+res3 = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial2','region','B1:K127','domainConc', D, 'show', 1, 'format', 4));
+res4 = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial2','region','M1:V109','domainConc', D, 'show', 1, 'format', 4));
 %set1
-res5 = fitKds2(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set1','region','B1:L318', 'domainConc', D, 'show', 1));
-res6 = fitKds2(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set1','region','O1:Y354', 'domainConc', D, 'show', 1));
-res7 = fitKds2(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set1','region','AB1:AL337', 'domainConc', D, 'show', 1));
+res5 = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set1','region','B1:L318', 'domainConc', D, 'show', 1, 'format', 2));
+res6 = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set1','region','O1:Y354', 'domainConc', D, 'show', 1, 'format', 2));
+res7 = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set1','region','AB1:AL337', 'domainConc', D, 'show', 1, 'format', 2));
 
 %set2
-res8 = fitKds2(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set2','region','B1:L777', 'domainConc', D, 'show', 1));
-res9 = fitKds2(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set2','region','O1:Y800', 'domainConc', D, 'show', 1));
-res10 = fitKds2(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set2','region','AB1:AL836', 'domainConc', D, 'show', 1));
+res8 = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set2','region','B1:L777', 'domainConc', D, 'show', 1, 'format', 2));
+res9 = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set2','region','O1:Y800', 'domainConc', D, 'show', 1, 'format', 2));
+res10 = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set2','region','AB1:AL836', 'domainConc', D, 'show', 1, 'format', 2));
 
 
 % now learning sequence-Kd mapping
@@ -38,7 +38,7 @@ J = containers.Map; % all Xcorr values
 K = containers.Map; % mean Xcorr values
 allResult = [res0,res1,res2,res3,res4,res5,res6,res7,res8,res9,res10];
 
-for j = 1:11
+for j = 1:length(allResult)
     for i = 1:size(allResult(j).Kd, 1) %size of allResult(1) is 1, size of AllResult(1).Kd is three columns
         idx = isfinite(allResult(j).Kd(i, :)); % Kd has multiple columns here,so this for loop will go through every row in every column
         kds = allResult(j).Kd(i, idx);
@@ -99,8 +99,8 @@ fclose(fid);
 
 % plot estimated versus observed error
 figure;
-p= errTab(errTab(:, 3) > 2, 1);
-q= errTab(errTab(:, 3) > 2, 2);
+p = errTab(errTab(:, 3) > 2, 1);
+q = errTab(errTab(:, 3) > 2, 2);
 plot(log10(q/1000000), log10(p/1000000), 'o','color','black');
 ylabel('log10(Estimated error/[M])');
 xlabel('log10(Observed error/[M])');
@@ -115,14 +115,14 @@ cor2 = corrcoef (log10(p),log10(q))
 
 % file a site-independent model
 [mm, alpha] = modelMatrix(keySeqs);
-b = fitlm(mm, log10(vals') + log10(units));
+b = fitlm(mm(:, 2:end), log10(vals') + log10(units)); % NOTE: fitlm automatically includes an intercept parameter
 ci = coefCI(b,.01); % this confidence interval only works for fitlm
 %ci returns two columns, mean-error, mean+error
-m=ci([1 3:end],:); % 2nd row is 0, does not exist in regress, can't match mm
+m=ci([1 2:end],:);
 %turn the two columns to mean and error
 m1 = m(:,1);
 m2 = m(:,2);
-m_hat = (m1+m2)/2;
+m_hat = table2array(b.Coefficients(1:end, 1));
 m_error = (m2-m1)/2;
 figure;%add this line to make two figures
 plot(log10(vals) + log10(units), mm*m_hat, 'o');
@@ -134,14 +134,15 @@ cor3 = corrcoef(log10(vals) + log10(units), mm*m_hat)
 % print optimal parameters
 k = 1;
 fprintf('--- parameters ---\n');
-fprintf('const = %f\t%f\n', m_hat(k),m_error(k));% was b(k)
+% fprintf('const = %f\t%f\n', m_hat(k),m_error(k));% was b(k)
 for i = 1:length(alpha)
     fprintf('--> site %d\n', i);
     for j = 1:length(alpha{i})
+        % NOTE: we are going to absorb the intercept term into each position's energies
         if (j == 1)
-            fprintf('\t\t%s\t0.0\n', alpha{i}(j));
+            fprintf('\t\t%s\t%.2f\t%.2f\n', alpha{i}(j), m_hat(1)/length(keySeqs{1}), m_error(k+1));
         else
-            fprintf('\t\t%s\t%.2f\t%.2f\n', alpha{i}(j), m_hat(k+1),m_error(k+1));
+            fprintf('\t\t%s\t%.2f\t%.2f\n', alpha{i}(j), m_hat(k+1) + m_hat(1)/length(keySeqs{1}), m_error(k+1));
             k = k + 1;
         end
     end
@@ -153,44 +154,29 @@ function ret = fitKds(inputs)
 allSeqs = raw(2:end, 7);
  
 % collect data from the three repeats
-xcorr = num(:, 4);
-dcorr = num(:, 8);% put three repeats in three columns
-expOut = num(:, 9);
-ctrIn = num(:, 11);
-ctrOut = num(:, 10);
-
-data = struct('seqs', {allSeqs},'xcorr',xcorr, 'dcorr', dcorr, 'expOut', expOut, 'ctrIn', ctrIn, 'ctrOut', ctrOut);
-ret = fitKdsFromData(inputs, data);
-
-
-function ret4 = fitKds4(inputs)
-% read data
-[num, ~, raw] = xlsread(inputs.xlsFile, inputs.sheetName, inputs.region);
-allSeqs = raw(2:end, 7);
- 
-% collect data from the three repeats
-xcorr = num(:, 5);% put three repeats in three columns
-expOut = num(:, 8);
-ctrIn = num(:, 10);
-ctrOut = num(:, 9);
+switch inputs.format
+    case 1
+        xcorr = num(:, 4);
+        expOut = num(:, 9);
+        ctrIn = num(:, 11);
+        ctrOut = num(:, 10);
+    case 2
+        xcorr = num(:, 4);
+        expOut = num(:, 9);
+        ctrIn = num(:, 10);
+        ctrOut = num(:, 11);
+    case 4
+        % collect data from the three repeats
+        xcorr = num(:, 5);% put three repeats in three columns
+        expOut = num(:, 8);
+        ctrIn = num(:, 10);
+        ctrOut = num(:, 9);
+    otherwise
+        error(sprintf('unrecognized format: %d', inputs.format));
+end
 
 data = struct('seqs', {allSeqs}, 'xcorr', xcorr, 'expOut', expOut, 'ctrIn', ctrIn, 'ctrOut', ctrOut);
-ret4 = fitKdsFromData(inputs, data);
-
-function ret2 = fitKds2(inputs)
-% read data
-[num, ~, raw] = xlsread(inputs.xlsFile, inputs.sheetName, inputs.region);
-allSeqs = raw(2:end, 7);
- 
-% collect data from the three repeats
-xcorr = num(:, 4);
-dcorr = num(:, 5);% put three repeats in three columns
-expOut = num(:, 9);
-ctrIn = num(:, 10);
-ctrOut = num(:, 11);
-
-data = struct('seqs', {allSeqs},'xcorr',xcorr, 'dcorr', dcorr, 'expOut', expOut, 'ctrIn', ctrIn, 'ctrOut', ctrOut);
-ret2 = fitKdsFromData(inputs, data);
+ret = fitKdsFromData(inputs, data);
 
 
 function result = fitKdsFromData(inputs, data)
@@ -248,7 +234,7 @@ if (show)
 end
 
 % compute Kd range
-[Kdr, error,KdRange] = estKd(inputs.domainConc, alpha(okPoints), alphaStd(okPoints));
+[Kdr, error, KdRange] = estKd(inputs.domainConc, alpha(okPoints), alphaStd(okPoints));
 KdError(valid(okPoints)) = error;
 Kd(valid(okPoints)) = Kdr;
 a(valid(okPoints)) = alpha(okPoints);
@@ -311,7 +297,7 @@ function [r, rStd] = ratioWithErrorPropagation(X, Y, stdX, stdY)
 % from D.T. Holmes, K.A. Buhr / Clinical Biochemistry 40 (2007) 728?734
 cvy = stdY./Y;
 cvx = stdX./X;
-rStd = (X./Y).*sqrt((cvx.^2) + (cvy.^2) + 3*(cvy.^2).*(cvx.^2) + 8*(cvy.^2));
+rStd = (X./Y).*sqrt((cvx.^2) + (cvy.^2) + 3*(cvy.^2).*(cvx.^2) + 8*(cvy.^4));
 r = (X./Y).*(1 + cvy.^2);
 
 
@@ -322,9 +308,9 @@ KdRange = -1*ones(length(alpha), 2); % lower and upper bounds of Kd
 alphaLo = alpha - alphaStd;
 alphaHi = alpha + alphaStd;
 
-ii = find((alpha > 0) & (alpha < 1)); Kd(ii, 1) = D*alpha(ii)./(1 - alpha(ii));errorKd(ii)=D*alphaStd(ii)./((1-alpha(ii)).^2);
-ii = find(alpha <= 0); Kd(ii) = 0;errorKd(ii)=inf;
-ii = find(alpha >= 1); Kd(ii) = inf;errorKd(ii)=inf;
+ii = find((alpha > 0) & (alpha < 1)); Kd(ii, 1) = D*alpha(ii)./(1 - alpha(ii)); errorKd(ii) = D*alphaStd(ii)./((1-alpha(ii)).^2);
+ii = find(alpha <= 0); Kd(ii) = 0; errorKd(ii) = inf;
+ii = find(alpha >= 1); Kd(ii) = inf; errorKd(ii) = inf;
 
 ii = find((alphaLo > 0) & (alphaLo < 1)); KdRange(ii, 1) = D*alphaLo(ii)./(1 - alphaLo(ii));
 ii = find(alphaLo <= 0); KdRange(ii, 1) = 0;
