@@ -11,7 +11,7 @@ if (~exist('aggregationType', 'var'))
     aggregationType = 'mean';
 end
 
-D = 35.29; % small setting, 300/850 
+D = 35.29; % high domain concentration    
 D2 = 3.529; % low domain concentration
 units = 10^-6; % concentration units in M
 allResult = [];
@@ -55,7 +55,6 @@ end
 
 presentResults(allResult, struct('aggregationType', aggregationType, 'units', units, 'show', 1), outBase);
 plotFpMsKd([outBase, '.csv']);
-
 
 function presentResults(allResult, opts, outBase)
 fprintf('Presenting results for %s\n', outBase);
