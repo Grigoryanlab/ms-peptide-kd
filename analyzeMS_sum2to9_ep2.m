@@ -11,27 +11,55 @@ if (~exist('aggregationType', 'var'))
     aggregationType = 'mean';
 end
 
-D = 35.29; % small setting, 300/850    
+D = 35.29; % small setting, 300/850 
+D2 = 3.529; % low domain concentration
 units = 10^-6; % concentration units in M
 allResult = [];
+show = 0;
+groups = 5;
 
-% change how 0 to 1 to make two figures
-allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial3','region','B1:L2247', 'domainConc', D, 'show', 1, 'format', 1), allResult);
-allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial3','region','S1:AC2218', 'domainConc', D, 'show', 1, 'format', 1), allResult);
-allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial3','region','AJ1:AT2201', 'domainConc', D, 'show', 1, 'format', 1), allResult);
-allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial2','region','B1:K127','domainConc', D, 'show', 1, 'format', 4), allResult);
-allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial2','region','M1:V109','domainConc', D, 'show', 1, 'format', 4), allResult);
+% 4096-peptide library
+if ~isempty(find(groups == 1))
+    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial3','region','B1:L2247', 'domainConc', D, 'show', show, 'format', 1), allResult);
+    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial3','region','S1:AC2218', 'domainConc', D, 'show', show, 'format', 1), allResult);
+    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial3','region','AJ1:AT2201', 'domainConc', D, 'show', show, 'format', 1), allResult);
+end
 
-%set1
-allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set1','region','B1:L318', 'domainConc', D, 'show', 1, 'format', 2), allResult);
-allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set1','region','O1:Y354', 'domainConc', D, 'show', 1, 'format', 2), allResult);
-allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set1','region','AB1:AL337', 'domainConc', D, 'show', 1, 'format', 2), allResult);
+%24-pep
+if ~isempty(find(groups == 2))
+    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial2','region','B1:K127','domainConc', D, 'show', show, 'format', 4), allResult);
+    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial2','region','M1:V109','domainConc', D, 'show', show, 'format', 4), allResult);
+end
 
-%set2
-allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set2','region','B1:L777', 'domainConc', D, 'show', 1, 'format', 2), allResult);
-allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set2','region','O1:Y800', 'domainConc', D, 'show', 1, 'format', 2), allResult);
-allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set2','region','AB1:AL836', 'domainConc', D, 'show', 1, 'format', 2), allResult);
+%432-pep
+if ~isempty(find(groups == 3))
+    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set1','region','B1:L318', 'domainConc', D, 'show', show, 'format', 2), allResult);
+    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set1','region','O1:Y354', 'domainConc', D, 'show', show, 'format', 2), allResult);
+    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set1','region','AB1:AL337', 'domainConc', D, 'show', show, 'format', 2), allResult);
+end
 
+%864-pep
+if ~isempty(find(groups == 4))
+    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set2','region','B1:L777', 'domainConc', D, 'show', show, 'format', 2), allResult);
+    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set2','region','O1:Y800', 'domainConc', D, 'show', show, 'format', 2), allResult);
+    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set2','region','AB1:AL836', 'domainConc', D, 'show', show, 'format', 2), allResult);
+end
+
+%432-pep(low domain concentration)
+if ~isempty(find(groups == 5))
+    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial8-set2','region','B1:L217', 'domainConc', D2, 'show', show,'format', 2), allResult);
+    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial8-set2','region','O1:Y206', 'domainConc', D2, 'show', show,'format', 2), allResult);
+    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial8-set2','region','AB1:AL194', 'domainConc', D2, 'show', show,'format', 2), allResult);
+end
+
+
+presentResults(allResult, struct('aggregationType', aggregationType, 'units', units, 'show', 1), outBase);
+plotFpMsKd([outBase, '.csv']);
+
+
+function presentResults(allResult, opts, outBase)
+fprintf('Presenting results for %s\n', outBase);
+if (~isfield(opts, 'show')), opts.show = 1; end
 
 % now learning sequence-Kd mapping
 M = containers.Map; % mean Kd for each unique sequence
@@ -97,14 +125,14 @@ end
 fid = fopen(sprintf('%s.csv', outBase), 'w');
 fprintf(fid, 'sequence, Kd_estimate, error(obs), error (est),number of samples, alpha, xcorr\n');
 keySeqs = keys(M);
-if strcmp(aggregationType, 'mean')
+if strcmp(opts.aggregationType, 'mean')
     vals = values(M);
     vals = [vals{:}];
-elseif strcmp(aggregationType, 'best')
+elseif strcmp(opts.aggregationType, 'best')
     vals = values(bM);
     vals = [vals{:}];
 else
-    error('unrecognized aggregation type "%s"', aggregationType);
+    error('unrecognized aggregation type "%s"', opts.aggregationType);
 end
 alphaValue = values(G);
 alphaValue = [alphaValue{:}];
@@ -113,9 +141,9 @@ xVal = values(K);
 xVal = [xVal{:}];
 errTab = zeros(length(keySeqs), 4);
 for i = 1:length(keySeqs)
-    if strcmp(aggregationType, 'mean')
+    if strcmp(opts.aggregationType, 'mean')
         err_est = mean(E(keySeqs{i}))/sqrt(length(A(keySeqs{i})));
-    elseif strcmp(aggregationType, 'best')
+    elseif strcmp(opts.aggregationType, 'best')
         err_est = bE(keySeqs{i});
     end
     err_obs = std(A(keySeqs{i}));
@@ -126,24 +154,26 @@ end
 fclose(fid);
 
 % plot estimated versus observed error
-figure;
-p = errTab(errTab(:, 3) > 2, 1);
-q = errTab(errTab(:, 3) > 2, 2);
-plot(log10(q/1000000), log10(p/1000000), 'o','color','black');
-ylabel('log10(Estimated error/[M])');
-xlabel('log10(Observed error/[M])');
+if opts.show
+    figure;
+    p = errTab(errTab(:, 3) > 2, 1);
+    q = errTab(errTab(:, 3) > 2, 2);
+    plot(log10(q/1000000), log10(p/1000000), 'o','color','black');
+    ylabel('log10(Estimated error/[M])');
+    xlabel('log10(Observed error/[M])');
 
-figure;
-plot(q,p,'o','color','black')
-ylabel('Estimated error/[uM]');
-xlabel('Observed error/[uM]');
+    figure;
+    plot(q,p,'o','color','black')
+    ylabel('Estimated error/[uM]');
+    xlabel('Observed error/[uM]');
+end
 
 cor1 = corrcoef (p,q)
 cor2 = corrcoef (log10(p),log10(q))
 
 % file a site-independent model
 [mm, alpha] = modelMatrix(keySeqs);
-b = fitlm(mm(:, 2:end), log10(vals') + log10(units)); % NOTE: fitlm automatically includes an intercept parameter
+b = fitlm(mm(:, 2:end), log10(vals') + log10(opts.units)); % NOTE: fitlm automatically includes an intercept parameter
 ci = coefCI(b,.01); % this confidence interval only works for fitlm
 %ci returns two columns, mean-error, mean+error
 %turn the two columns to mean and error
@@ -151,13 +181,16 @@ m1 = ci(:,1);
 m2 = ci(:,2);
 m_hat = table2array(b.Coefficients(1:end, 1));
 m_error = (m2-m1)/2;
-figure;%add this line to make two figures
-plot(log10(vals) + log10(units), mm*m_hat, 'o');
-set(gca, 'FontSize', 14);
-xlabel('experimental log10(Kd [M])');
-ylabel('linear-model prediction');
 
-cor3 = corrcoef(log10(vals) + log10(units), mm*m_hat)
+if opts.show
+    figure;%add this line to make two figures
+    plot(log10(vals) + log10(opts.units), mm*m_hat, 'o');
+    set(gca, 'FontSize', 14);
+    xlabel('experimental log10(Kd [M])');
+    ylabel('linear-model prediction');
+end
+
+cor3 = corrcoef(log10(vals) + log10(opts.units), mm*m_hat)
 % print optimal parameters
 k = 1;
 fprintf('--- parameters ---\n');
@@ -230,9 +263,9 @@ end
 % go over each repeat
 Kd = nan(length(find(seqsOK)), 1);
 KdError = 0*Kd + inf; logKdError = KdError;
-a=Kd; xcor=Kd;
-KdHi=Kd; KdLo=Kd;
-if (~exist('show', 'var')), show = 1; end
+a = Kd; xcor = Kd;
+KdHi = Kd; KdLo = Kd;
+if (~isfield(inputs, 'show')), inputs.show = 1; end
 x = data.ctrIn(seqsOK);
 y = data.ctrOut(seqsOK);
 [g, ~] = gaussianErrorModelWithBaseline(x, y);
@@ -244,7 +277,7 @@ xc = data.xcorr(seqsOK);
 valid = find(~isnan(X) & ~isnan(Y)); X = X(valid); Y = Y(valid);
 xc = xc(valid);
 
-if (show)
+if (inputs.show)
     figure;
     subplot(1, 3, 1);% first column of figures in figure1
 %     hold off; plot(x, y, 'k.'); hold on;
@@ -260,7 +293,7 @@ end
 [alpha, alphaStd] = ratioWithErrorPropagation(X, Y, sqrt(myVar(X, g)), sqrt(myVar(Y, g)));
 okPoints = find(alphaStd < 0.4);
 fprintf('--> %d / %d points have tolerable error\n', length(okPoints), length(alpha));
-if (show)
+if (inputs.show)
     subplot(1, 3, 3);% third column of figure1
     errorbar(1:length(X), alpha, alphaStd, alphaStd, 'k.');
 end
