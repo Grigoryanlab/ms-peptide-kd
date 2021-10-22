@@ -82,7 +82,8 @@ for j = 1:length(allResult)
         kd_ints = allResult(j).KdHi(i, idx) - allResult(j).KdLo(i, idx);
         f = allResult(j).a(i,idx);
         xcorr = allResult(j).xcor(i,idx);
-        if all(~isempty(kds)) && all(~isinf(kd_ints)) && all(~isinf(kd_err)) && all(~isnan(kds))
+%         if all(~isempty(kds)) && all(~isinf(kd_ints)) && all(~isinf(kd_err)) && all(~isnan(kds))
+        if all(~isempty(kds)) && all(~isnan(kds))
             if (isKey(M, allResult(j).seqs{i}))
                 A(allResult(j).seqs{i}) = [A(allResult(j).seqs{i}) kds];
                 M(allResult(j).seqs{i}) = mean(A(allResult(j).seqs{i}));
