@@ -3,12 +3,15 @@
 %print alpha and dcorr values
 %this version has confidence intervals listed, used fitlm instead of
 %regress
-function analyzeMS_sum2to9_ep2(outBase, dataFileXLS, aggregationType)
+function analyzeMS_sum2to9_ep2(outBase, dataFileXLS, aggregationType, non_inf_kd_int)
 if (~exist('dataFileXLS', 'var') || isempty(dataFileXLS))
     dataFileXLS = 'ms_allData3.xlsx';
 end
 if (~exist('aggregationType', 'var'))
     aggregationType = 'mean';
+end
+if (~exist('non_inf_kd_int', 'var'))
+    non_inf_kd_int = true;
 end
 
 D = 35.29; % high domain concentration    
@@ -53,7 +56,7 @@ if ~isempty(find(groups == 5, 1))
 end
 
 
-presentResults(allResult, struct('aggregationType', aggregationType, 'units', units, 'show', 1), outBase);
+presentResults(allResult, struct('aggregationType', aggregationType, 'units', units, 'show', 1, 'non_inf_kd_int', non_inf_kd_int), outBase);
 plotFpMsKd([outBase, '.csv']);
 
 function presentResults(allResult, opts, outBase)
@@ -82,8 +85,9 @@ for j = 1:length(allResult)
         kd_ints = allResult(j).KdHi(i, idx) - allResult(j).KdLo(i, idx);
         f = allResult(j).a(i,idx);
         xcorr = allResult(j).xcor(i,idx);
-%         if all(~isempty(kds)) && all(~isinf(kd_ints)) && all(~isinf(kd_err)) && all(~isnan(kds))
-        if all(~isempty(kds)) && all(~isnan(kds))
+        pass = opts.non_inf_kd_int && all(~isempty(kds)) && all(~isinf(kd_ints)) && all(~isinf(kd_err)) && all(~isnan(kds));
+        pass = pass || (~opts.non_inf_kd_int && all(~isempty(kds)) && all(~isnan(kds)));
+        if pass
             if (isKey(M, allResult(j).seqs{i}))
                 A(allResult(j).seqs{i}) = [A(allResult(j).seqs{i}) kds];
                 M(allResult(j).seqs{i}) = mean(A(allResult(j).seqs{i}));
@@ -141,23 +145,20 @@ xVal = values(K);
 xVal = [xVal{:}];
 errTab = zeros(length(keySeqs), 4);
 for i = 1:length(keySeqs)
-    if strcmp(opts.aggregationType, 'mean')
-        err_est = mean(E(keySeqs{i}))/sqrt(length(A(keySeqs{i})));
-    elseif strcmp(opts.aggregationType, 'best')
-        err_est = bE(keySeqs{i});
-    end
+    err_est = mean(E(keySeqs{i}));
     err_obs = std(A(keySeqs{i}));
 
     errTab(i, :) = [err_est, err_obs, length(A(keySeqs{i})), vals(i)];
-    fprintf(fid, '%s,%f,%f,%f,%f,%f,%f\n', keySeqs{i}, vals(i), err_obs, err_est, length(A(keySeqs{i})), alphaValue(i), xVal(i));
+    fprintf(fid, '%s,%f,%f,%f,%f,%f,%f\n', keySeqs{i}, vals(i), err_obs, bE(keySeqs{i}), length(A(keySeqs{i})), alphaValue(i), xVal(i));
 end
 fclose(fid);
 
 % plot estimated versus observed error
 if opts.show
     figure;
-    p = errTab(errTab(:, 3) > 2, 1);
-    q = errTab(errTab(:, 3) > 2, 2);
+    p = errTab(errTab(:, 3) > 4, 1);
+    q = errTab(errTab(:, 3) > 4, 2);
+    fprintf('Observed errors computed for %d peptides\n', length(p));
     plot(log10(q/1000000), log10(p/1000000), 'o','color','black');
     ylabel('log10(Estimated error/[M])');
     xlabel('log10(Observed error/[M])');
@@ -168,8 +169,8 @@ if opts.show
     xlabel('Observed error/[uM]');
 end
 
-cor1 = corrcoef (p,q)
-cor2 = corrcoef (log10(p),log10(q))
+r = corrcoef(p,q); fprintf('R between observed and estimated errors: %f\n', r(1,2));
+r = corrcoef(log10(p),log10(q)); fprintf('R between logs of observed and estimated errors: %f\n', r(1,2));
 
 % file a site-independent model
 [mm, alpha] = modelMatrix(keySeqs);
