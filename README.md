@@ -2,7 +2,7 @@
 Code and data for analyzing results from PEDAL (Parallel Equilibrium Dialysis for Affinity Learning) experiments by Zhao and Grigoryan, et al.
 
 # Table of contents
-‘ms_allData3.xlsx’ -- mass spectrometry data (including peptide sequences and peak intencities) obtained as part of our study of PDZ-peptide interactions using PEDAL. The file contains five independent datasets (different peptide libraries or different experimental settings). This is the default dataset read by ‘analyzeMS.ms’.
+`ms_allData3.xlsx` -- mass spectrometry data (including peptide sequences and peak intencities) obtained as part of our study of PDZ-peptide interactions using PEDAL. The file contains five independent datasets (different peptide libraries or different experimental settings). This is the default dataset read by ‘analyzeMS.ms’.
 
 ‘Kd_FP_sum.xlsx’ -- peptide affinity validation data obtained using using Fluorescence Polarization (FP) in low throughput.
 
