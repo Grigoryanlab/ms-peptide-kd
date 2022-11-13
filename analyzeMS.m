@@ -18,36 +18,36 @@ groups = 5;
 
 % 4096-peptide library
 if ~isempty(find(groups == 1, 1))
-    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial3','region','B1:L2247', 'domainConc', D, 'show', show, 'format', 1), allResult);
-    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial3','region','S1:AC2218', 'domainConc', D, 'show', show, 'format', 1), allResult);
-    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial3','region','AJ1:AT2201', 'domainConc', D, 'show', show, 'format', 1), allResult);
+    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', '4096-lib','region','B1:L2247', 'domainConc', D, 'show', show, 'format', 1), allResult);
+    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', '4096-lib','region','S1:AC2218', 'domainConc', D, 'show', show, 'format', 1), allResult);
+    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', '4096-lib','region','AJ1:AT2201', 'domainConc', D, 'show', show, 'format', 1), allResult);
 end
 
 %24-pep
 if ~isempty(find(groups == 2, 1))
-    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial2','region','B1:K127','domainConc', D, 'show', show, 'format', 4), allResult);
-    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial2','region','M1:V109','domainConc', D, 'show', show, 'format', 4), allResult);
+    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', '24-lib','region','B1:K127','domainConc', D, 'show', show, 'format', 4), allResult);
+    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', '24-lib','region','M1:V109','domainConc', D, 'show', show, 'format', 4), allResult);
 end
 
 %432-pep
 if ~isempty(find(groups == 3, 1))
-    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set1','region','B1:L318', 'domainConc', D, 'show', show, 'format', 2), allResult);
-    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set1','region','O1:Y354', 'domainConc', D, 'show', show, 'format', 2), allResult);
-    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set1','region','AB1:AL337', 'domainConc', D, 'show', show, 'format', 2), allResult);
+    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', '432-lib','region','B1:L318', 'domainConc', D, 'show', show, 'format', 2), allResult);
+    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', '432-lib','region','O1:Y354', 'domainConc', D, 'show', show, 'format', 2), allResult);
+    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', '432-lib','region','AB1:AL337', 'domainConc', D, 'show', show, 'format', 2), allResult);
 end
 
 %864-pep
 if ~isempty(find(groups == 4, 1))
-    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set2','region','B1:L777', 'domainConc', D, 'show', show, 'format', 2), allResult);
-    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set2','region','O1:Y800', 'domainConc', D, 'show', show, 'format', 2), allResult);
-    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial9-set2','region','AB1:AL836', 'domainConc', D, 'show', show, 'format', 2), allResult);
+    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', '864-lib','region','B1:L777', 'domainConc', D, 'show', show, 'format', 2), allResult);
+    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', '864-lib','region','O1:Y800', 'domainConc', D, 'show', show, 'format', 2), allResult);
+    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', '864-lib','region','AB1:AL836', 'domainConc', D, 'show', show, 'format', 2), allResult);
 end
 
 %432-pep(low domain concentration)
 if ~isempty(find(groups == 5, 1))
-    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial8-set2','region','B1:L217', 'domainConc', D2, 'show', show,'format', 2), allResult);
-    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial8-set2','region','O1:Y206', 'domainConc', D2, 'show', show,'format', 2), allResult);
-    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', 'trial8-set2','region','AB1:AL194', 'domainConc', D2, 'show', show,'format', 2), allResult);
+    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', '432-lib(low De)','region','B1:L217', 'domainConc', D2, 'show', show,'format', 2), allResult);
+    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', '432-lib(low De)','region','O1:Y206', 'domainConc', D2, 'show', show,'format', 2), allResult);
+    allResult = fitKds(struct('xlsFile', dataFileXLS, 'sheetName', '432-lib(low De)','region','AB1:AL194', 'domainConc', D2, 'show', show,'format', 2), allResult);
 end
 
 
