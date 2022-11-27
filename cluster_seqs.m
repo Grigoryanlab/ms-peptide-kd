@@ -21,3 +21,8 @@ gscatter(Y(:,1), Y(:,2), G);
 % make it pretty
 h = gscatter(Y(:,1), Y(:,2), G, [], '.', 12);
 set(gca, 'FontSize', 16);
+axis square;
+xlabel('t-SNE dimension 1');
+ylabel('t-SNE dimension 2');
+set(gca, 'XTick', [], 'YTick', []);
+print(gcf, '-dpng', '-r300', 'tsne.png');
