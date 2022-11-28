@@ -14,7 +14,7 @@ D2 = 3.529; % low domain concentration
 units = 10^-6; % concentration units in M
 allResult = [];
 show = 0;
-groups = 5;
+groups = [1 2 3 4 5];
 
 % 4096-peptide library
 if ~isempty(find(groups == 1, 1))
@@ -56,96 +56,118 @@ plotFpMsKd([outBase, '.csv']);
 
 
 function presentResults(allResult, opts, outBase)
+non_binders_strictness = 2;
 fprintf('Presenting results for %s\n', outBase);
 if (~isfield(opts, 'show')), opts.show = 1; end
 
 % now learning sequence-Kd mapping
-M = containers.Map; % mean Kd for each unique sequence
 A = containers.Map; % all Kds for each unique sequence
 E = containers.Map; % error of each Kd estimate for each unique sequence
 LE = containers.Map; % error of each logKd estimate for each unique sequence
 F = containers.Map; % all alpha values for each unique peptide
-G = containers.Map; % mean alpha values for each unique peptide
-bM = containers.Map; % best estimate of Kd for each unique sequence
-bE = containers.Map; % error associated with the best estimate of Kd for each unique sequence
-
+B = containers.Map; % index of the best-estimated Kd out of all Kds for each sequence
+nB = containers.Map; % keys are sequences of confident non-binders
+source = containers.Map; % all of the experiments from which data for each binder came from
 J = containers.Map; % all Xcorr values
-K = containers.Map; % mean Xcorr values
 
+lookuprow=@(x, i) x(i, :);
 for j = 1:length(allResult)
-    for i = 1:size(allResult(j).Kd, 1) 
-        idx = isfinite(allResult(j).Kd(i, :)); 
-        kds = allResult(j).Kd(i, idx);
-        kd_err = allResult(j).KdError(i, idx);
-        logkd_err = allResult(j).logKdError(i, idx);
-        kd_ints = allResult(j).KdHi(i, idx) - allResult(j).KdLo(i, idx);
-        f = allResult(j).a(i,idx);
-        xcorr = allResult(j).xcor(i,idx);
-        pass = opts.non_inf_kd_int && all(~isempty(kds)) && all(~isinf(kd_ints)) && all(~isinf(kd_err)) && all(~isnan(kds));
-        pass = pass || (~opts.non_inf_kd_int && all(~isempty(kds)) && all(~isnan(kds)));
-        if pass
-            if (isKey(M, allResult(j).seqs{i}))
-                A(allResult(j).seqs{i}) = [A(allResult(j).seqs{i}) kds];
-                M(allResult(j).seqs{i}) = mean(A(allResult(j).seqs{i}));
-                E(allResult(j).seqs{i}) = [E(allResult(j).seqs{i}) kd_err];
-                LE(allResult(j).seqs{i}) = [LE(allResult(j).seqs{i}) logkd_err];
-                F(allResult(j).seqs{i}) = [F(allResult(j).seqs{i}) f];
-                G(allResult(j).seqs{i}) = mean(F(allResult(j).seqs{i}));
-             
-                [~, si] = min(kd_err);
-                if (kd_err(si) < bE(allResult(j).seqs{i}))
-                    bM(allResult(j).seqs{i}) = kds(si);
-                    bE(allResult(j).seqs{i}) = kd_err(si);
-                end
-
-                J(allResult(j).seqs{i}) = [J(allResult(j).seqs{i}) xcorr];
-                K(allResult(j).seqs{i}) = mean(J(allResult(j).seqs{i}));
+    for i = 1:size(allResult(j).Kd, 1)
+        src = [j, i];
+        seq = allResult(j).seqs{i};
+        switch non_binders_strictness
+            case 1
+                cond = isinf(allResult(j).KdHi(i));
+            case 2
+                cond = isinf(allResult(j).Kd(i));
+            case 3
+                cond = isinf(allResult(j).KdLo(i)) && isinf(allResult(j).Kd(i));
+            otherwise
+                error('unknown non-binder strictness level %d', non_binders_strictness);
+        end
+        if cond && ~isKey(nB, seq)
+            % this is a confident non-binder
+            if isKey(nB, seq)
+                nB(seq) = union(nB(seq), src, 'rows');
             else
-                M(allResult(j).seqs{i}) = mean(kds);
-                A(allResult(j).seqs{i}) = kds;
-                E(allResult(j).seqs{i}) = kd_err;
-                LE(allResult(j).seqs{i}) = logkd_err;
-                F(allResult(j).seqs{i}) = f;
-                G(allResult(j).seqs{i}) = mean(f);
-
-                [~, si] = min(kd_err);
-                bM(allResult(j).seqs{i}) = kds(si);
-                bE(allResult(j).seqs{i}) = kd_err(si);
-
-                J(allResult(j).seqs{i}) = xcorr;
-                K(allResult(j).seqs{i}) = mean(xcorr); 
+                nB(seq) = src;
+            end
+        end
+        kd = allResult(j).Kd(i);
+        kd_err = allResult(j).KdError(i);
+        logkd_err = allResult(j).logKdError(i);
+        kd_int = allResult(j).KdHi(i) - allResult(j).KdLo(i);
+        f = allResult(j).a(i);
+        xcorr = allResult(j).xcor(i);
+        pass = opts.non_inf_kd_int && ~isinf(kd_int) && ~isinf(kd_err) && ~isnan(kd);
+        pass = pass || (~opts.non_inf_kd_int && ~isnan(kd));
+        if pass
+            if (isKey(nB, seq))
+                % this is no longer a confident non-binder as we see
+                % evidence of binding in the current dataset
+                remove(nB, seq);
+            end
+            if (isKey(A, seq))
+                A(seq) = [A(seq); kd];
+                E(seq) = [E(seq); kd_err];
+                LE(seq) = [LE(seq); logkd_err];
+                F(seq) = [F(seq); f];
+                source(seq) = union(source(seq), src, 'rows');             
+                if (kd_err < lookuprow(E(seq), B(seq)))
+                    B(seq) = length(A(seq));
+                end
+                J(seq) = [J(seq); xcorr];
+            else
+                A(seq) = kd;
+                B(seq) = 1;
+                E(seq) = kd_err;
+                LE(seq) = logkd_err;
+                F(seq) = f;
+                source(seq) = src;
+                J(seq) = xcorr;
             end
         end
     end
-    fprintf('%d unique peptides \n', length(keys(M)));
+    fprintf('%d unique peptides \n', length(keys(A)));
 end
 
 
-% write summary
-fid = fopen(sprintf('%s.csv', outBase), 'w');
-fprintf(fid, 'sequence, Kd_estimate, error(obs), error (est),number of samples, alpha, xcorr\n');
-keySeqs = keys(M);
-if strcmp(opts.aggregationType, 'mean')
-    vals = values(M);
-    vals = [vals{:}];
-elseif strcmp(opts.aggregationType, 'best')
-    vals = values(bM);
-    vals = [vals{:}];
-else
-    error('unrecognized aggregation type "%s"', opts.aggregationType);
-end
-alphaValue = values(G);
-alphaValue = [alphaValue{:}];
-
-xVal = values(K);
-xVal = [xVal{:}];
+% write summary datafile about binders
+keySeqs = keys(A);
 errTab = zeros(length(keySeqs), 4);
+fid = fopen(sprintf('%s.csv', outBase), 'w');
+fprintf(fid, 'sequence,Kd_estimate,dataset(s),error(obs),error (est),number of samples,alpha,xcorr\n');
+kd_vals = zeros(1, length(keySeqs));
 for i = 1:length(keySeqs)
-    err_est = mean(E(keySeqs{i}));
+    seq = keySeqs{i};
+    if strcmp(opts.aggregationType, 'mean')
+        kd = mean(A(seq));
+        err_est = mean(E(seq));
+        alpha = mean(F(seq));
+        xcor = mean(J(seq));
+        src = source(seq);
+        datasets = cell(1, size(src, 1));
+        for si = 1:size(src, 1)
+            datasets{si} = allResult(src(si, 1)).sourceSheet{src(si, 2)};
+        end
+        dataset = join(unique(datasets), ';');
+        dataset = dataset{1};
+    elseif strcmp(opts.aggregationType, 'best')
+        kd = lookuprow(A(seq), B(seq));
+        err_est = lookuprow(E(seq), B(seq));
+        alpha = lookuprow(F(seq), B(seq));
+        xcor = lookuprow(J(seq), B(seq));
+        src = lookuprow(source(seq), B(seq));
+        dataset = allResult(src(1)).sourceSheet{src(2)};
+    else
+        error('unrecognized aggregation type "%s"', opts.aggregationType);
+    end
     err_obs = std(A(keySeqs{i}));
+    kd_vals(i) = kd;
+    fprintf(fid, '%s,%f,%s,%f,%f,%f,%f,%f\n', seq, kd, dataset, err_obs, err_est, length(A(seq)), alpha, xcor);
 
-    errTab(i, :) = [err_est, err_obs, length(A(keySeqs{i})), vals(i)];
-    fprintf(fid, '%s,%f,%f,%f,%f,%f,%f\n', keySeqs{i}, vals(i), err_obs, bE(keySeqs{i}), length(A(keySeqs{i})), alphaValue(i), xVal(i));
+    % for later analysis
+    errTab(i, :) = [mean(E(seq)), std(A(seq)), length(A(seq)), kd];
 end
 fclose(fid);
 
@@ -168,9 +190,9 @@ end
 r = corrcoef(p,q); fprintf('R between observed and estimated errors: %f\n', r(1,2));
 r = corrcoef(log10(p),log10(q)); fprintf('R between logs of observed and estimated errors: %f\n', r(1,2));
 
-% file a site-independent model
+% fit a site-independent model
 [mm, alpha] = modelMatrix(keySeqs);
-b = fitlm(mm(:, 2:end), log10(vals') + log10(opts.units)); 
+b = fitlm(mm(:, 2:end), log10(kd_vals') + log10(opts.units)); 
 ci = coefCI(b,.01); 
 
 m1 = ci(:,1);
@@ -180,13 +202,13 @@ m_error = (m2-m1)/2;
 
 if opts.show
     figure;
-    plot(log10(vals) + log10(opts.units), mm*m_hat, 'o');
+    plot(log10(kd_vals) + log10(opts.units), mm*m_hat, 'o');
     set(gca, 'FontSize', 14);
     xlabel('experimental log10(Kd [M])');
     ylabel('linear-model prediction');
 end
 
-cor3 = corrcoef(log10(vals) + log10(opts.units), mm*m_hat)
+cor3 = corrcoef(log10(kd_vals) + log10(opts.units), mm*m_hat)
 
 k = 1;
 fprintf('--- parameters ---\n');
@@ -203,6 +225,23 @@ for i = 1:length(alpha)
         end
     end
 end
+
+% write summary datafile about non-binders
+keySeqs = keys(nB);
+fid = fopen(sprintf('%s-nonbinders.csv', outBase), 'w');
+fprintf(fid, 'sequence,dataset(s)\n');
+for i = 1:length(keySeqs)
+    seq = keySeqs{i};
+    src = nB(seq);
+    datasets = cell(1, size(src, 1));
+    for si = 1:size(src, 1)
+        datasets{si} = allResult(src(si, 1)).sourceSheet{src(si, 2)};
+    end
+    dataset = join(unique(datasets), ';');
+    dataset = dataset{1};
+    fprintf(fid, '%s,%s\n', seq, dataset);
+end
+fclose(fid);
 
 function results = fitKds(inputs, results)
 % read data
@@ -233,6 +272,8 @@ end
 
 data = struct('seqs', {allSeqs}, 'xcorr', xcorr, 'expOut', expOut, 'ctrIn', ctrIn, 'ctrOut', ctrOut);
 ret = fitKdsFromData(inputs, data);
+ret.sourceFile = repmat({inputs.xlsFile}, length(ret.Kd), 1);
+ret.sourceSheet = repmat({inputs.sheetName}, length(ret.Kd), 1);
 if isempty(results)
     results = ret;
 else
